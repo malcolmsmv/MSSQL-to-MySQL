@@ -10,7 +10,7 @@ conn = pyodbc.connect('DRIVER={FreeTDS}; SERVER=YOUR SERVER; DATABASE=YOUR DB; U
 msCursor = conn.cursor()
 
 #connection for MySQL
-db = MySQLdb.connect(passwd="YOUR PASS", db="YOUR DB")
+db = MySQLdb.connect(host="YOUR HOST", user="YOUR USER", passwd="YOUR PASS", db="YOUR DB")
 myCursor = db.cursor()
 
 msCursor.execute("SELECT * FROM sysobjects WHERE type='U'") #sysobjects is a table in MSSQL db's containing meta data about the database. (Note: this may vary depending on your MSSQL version!)
@@ -27,19 +27,18 @@ for tbl in dbTables:
 	#make adjustments to account for data types present in MSSQL but not supported in MySQL (NEEDS WORK!)
 	if col.xtype == 60:
 	    colType = "float"
-	    attr += col.name +" "+ colType + "(" + str(col.length) + "),"
+	    attr += "`"+col.name +"` "+ colType + "(" + str(col.length) + "),"
 	elif col.xtype in noLength:
-	    attr += col.name +" "+ colType + ","
+	    attr += "`"+col.name +"` "+ colType + ","
 	else:
-	    attr += col.name +" "+ colType + "(" + str(col.length) + "),"
+	    attr += "`"+col.name +"` "+ colType + "(" + str(col.length) + "),"
 	
     attr = attr[:-1]
    
     print 'Fetch rows from table {0}'.format(tbl[0])
     myCursor.execute("CREATE TABLE " + tbl[0] + " (" + attr + ");") #create the new table and all columns
-    msCursor.execute("select * from %s" % tbl[0])
+    msCursor.execute("select * from [%s]" % tbl[0])
     tblData = msCursor.fetchmany(1000)
-
     while len(tblData) > 0:
         cnt = 0
         #populate the new MySQL table with the data from MSSQL
@@ -53,7 +52,7 @@ for tbl in dbTables:
 		    fieldList += "'"+ field + "',"
 
 	    fieldList = fieldList[:-1]
-	    myCursor.execute("INSERT INTO " + tbl[0] + " VALUES (" + fieldList + ")" )
+	    myCursor.execute("INSERT INTO `" + tbl[0] + "` VALUES (" + fieldList + ")" )
             cnt += 1
             if cnt%100 == 0:
                 print 'inserted 100 rows into table {0}'.format(tbl[0])
